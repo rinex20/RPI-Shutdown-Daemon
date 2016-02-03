@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Wait with interrupt for falling edge of pin 0 (RPi pin 11)
+# Then poll the pin until it goes high. It elapsed time
+# low is more than 6 seconds halt processor otherwise
+# fall back into interrupt mode waiting for falling edge
+# This script would be run at boot by rc.allstar
+# WA3DSP 3/2015
+
+
+
+# Take pin from command line or use default
+# Default pin 3 (wiringpi layout) (RPi pin 11)
+if [ -z "$1" ]
+  then
+    PIN=3
+  else
+    PIN=$1
+fi
+
+ps ax | grep "[g]pio wfi $PIN falling" > /dev/null
+if [ $? -eq 0 ]; then
+  echo "Process is already running."
+  exit 0
+fi
+
+# Required button hold down seconds
+HOLDTIME=6
+
+gpio mode $PIN in
+gpio mode $PIN down
+TIME1=1
+
+while [ 1=1 ]
+#echo "got here 1"
+   gpio wfi $PIN falling
+   do
+#echo "got here 2"
+   while [ `gpio read $PIN` -eq "1" ];
+   do
+#echo $TIME1 $STATE
+      sleep 1
+      let TIME1+=1
+      if [ $TIME1 -gt $HOLDTIME ]; then
+         break 3;
+      fi
+   done
+   TIME1=1
+   continue
+done
+# Call code here to execute before shutdown
+
+sleep 10
+shutdown -h now
